@@ -1,0 +1,44 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "17 0 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Merge morluto/rea main into origin main
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out origin main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Merge upstream main and push
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/morluto/rea.git
+          git fetch upstream main
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "origin main already contains upstream main; nothing to merge."
+            exit 0
+          fi
+          if ! git merge --no-edit upstream/main; then
+            echo "::error::Merge conflict with upstream main; resolve manually." >&2
+            git merge --abort
+            exit 1
+          fi
+          git push origin HEAD:main
