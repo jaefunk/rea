@@ -18,12 +18,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      # The default GITHUB_TOKEN cannot push changes under .github/workflows/,
+      # and upstream edits its workflows regularly. Store a personal access
+      # token with contents:write and workflows:write as the repository secret
+      # SYNC_UPSTREAM_TOKEN. Pushes made with it also start CI on main, which
+      # GITHUB_TOKEN pushes never do. Without the secret the job falls back to
+      # GITHUB_TOKEN and fails whenever the merge touches a workflow file.
       - name: Check out origin main
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
           persist-credentials: true
+          token: ${{ secrets.SYNC_UPSTREAM_TOKEN || github.token }}
 
       - name: Merge upstream main and push
         run: |
